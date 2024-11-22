@@ -7,6 +7,8 @@ This project involves implementing a **Task Scheduler/Planner** in OZ using two 
 1. **Functional Paradigm**
 2. **Imperative Paradigm**
 
+# THIS SHOULD INCLUDE A DATABASE - NOT SHURE HOW THOUGH #
+
 The goal is to explore how different programming paradigms impact the design and implementation of software.
 
 ---
