@@ -4,10 +4,9 @@ import
     OS
     File
     TextIO
-    Application
     Tk
 export
-    RunTUI
+    runTUI: RunTUI
 define
     % Task record definition
     TaskRecord = {NewName}
@@ -49,9 +48,10 @@ define
     fun {LoadTasks}
         FolderPath = {EnsureTasksFolder}
         Files = {OS.listDir FolderPath}
-        Tasks = {List.map 
+    in
+        {List.map 
             {List.filter Files fun {$ F} {String.isSubstring F ".txt"} end}
-            proc {$ FileName Task}
+            fun {$ FileName}
                 FilePath = FolderPath#FileName
                 File = {TextIO.openFile FilePath [read]}
                 Title = {TextIO.readLine File}
@@ -60,16 +60,14 @@ define
                 Completed = {TextIO.readLine File}
                 ID = {String.toInt {String.substring FileName 0 {String.length FileName}-4}}
             in
-                Task = {CreateTask ID 
+                {TextIO.closeFile File}
+                {CreateTask ID 
                     {String.trim Title} 
                     {String.trim Description} 
                     {String.trim Deadline} 
                     {String.trim Completed} == "true"}
-                {TextIO.closeFile File}
             end}
-        in
-            Tasks
-        end
+    end
 
     % Functional Implementation
     fun {CreateTask ID Title Description Deadline Completed}
@@ -207,5 +205,9 @@ define
              menuItem("Mark Complete" proc {$} {MarkCompleteUI Manager} end)
              menuItem("Edit Task"    proc {$} {EditTaskUI Manager} end)
              menuItem("View Tasks"   proc {$} {ViewTasksUI Manager} end)]}
+        {Tk.startEventLoop}
     end
+
+    % Start the application
+    {RunTUI}
 end
