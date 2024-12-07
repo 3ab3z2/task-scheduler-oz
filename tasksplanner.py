@@ -1,7 +1,6 @@
 import os
 from tkinter import Tk, Button, Label, Frame, Toplevel, Entry, BooleanVar, Checkbutton, messagebox, Canvas, Scrollbar
 
-
 # TaskRecord class to represent a single task
 class TaskRecord:
     def __init__(self, task_id, title, description, deadline, completed):
@@ -11,14 +10,12 @@ class TaskRecord:
         self.deadline = deadline
         self.completed = completed
 
-
 # Ensure tasks folder exists
 def ensure_tasks_folder():
     folder_path = "tasks/"
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
     return folder_path
-
 
 # Save task to file
 def save_task_to_file(task):
@@ -29,7 +26,6 @@ def save_task_to_file(task):
         file.write(f"{task.description}\n")
         file.write(f"{task.deadline}\n")
         file.write(f"{str(task.completed)}\n")
-
 
 # Load tasks from files
 def load_tasks():
@@ -43,10 +39,9 @@ def load_tasks():
                 description = file.readline().strip()
                 deadline = file.readline().strip()
                 completed = file.readline().strip() == "True"
-                task_id = int(file_name[:-4])  # Remove .txt to get the task ID
+                task_id = int(file_name[:-4])
                 tasks.append(TaskRecord(task_id, title, description, deadline, completed))
     return tasks
-
 
 # TaskManager class to manage tasks
 class TaskManager:
@@ -64,23 +59,27 @@ class TaskManager:
         if os.path.exists(file_name):
             os.remove(file_name)
 
-
-# UI: View Tasks with Scrollbar
+# UI: View Tasks with Delete Buttons
 def view_tasks_ui(manager):
+    def delete_task(task_id):
+        manager.remove_task(task_id)
+        messagebox.showinfo("Success", "Task deleted successfully!")
+        view_window.destroy()
+        view_tasks_ui(manager)
+
     view_window = Toplevel()
     view_window.title("View Tasks")
     view_window.geometry("500x400")
-    view_window.configure(bg="#f9f9f9")
+    view_window.configure(bg="#E3E4FA")
 
-    Label(view_window, text="Tasks List", font=("Helvetica", 16), bg="#f9f9f9").pack(pady=10)
+    Label(view_window, text="Tasks List", font=("Helvetica", 16), bg="#E3E4FA").pack(pady=10)
 
-    # Create a Frame and Canvas for Scrollable View
     container = Frame(view_window)
     container.pack(fill="both", expand=True)
 
-    canvas = Canvas(container, bg="#f9f9f9", highlightthickness=0)
+    canvas = Canvas(container, bg="#E3E4FA", highlightthickness=0)
     scrollbar = Scrollbar(container, orient="vertical", command=canvas.yview)
-    scrollable_frame = Frame(canvas, bg="#f9f9f9")
+    scrollable_frame = Frame(canvas, bg="#E3E4FA")
 
     scrollable_frame.bind(
         "<Configure>",
@@ -94,25 +93,28 @@ def view_tasks_ui(manager):
     scrollbar.pack(side="right", fill="y")
 
     for task in manager.tasks:
-        frame = Frame(scrollable_frame, bg="#f9f9f9", pady=5)
+        frame = Frame(scrollable_frame, bg="#E3E4FA", pady=5)
         frame.pack(fill="x", padx=10)
 
         Label(
             frame,
             text=f"ID: {task.id}\nTitle: {task.title}\nDescription: {task.description}\nDeadline: {task.deadline}\nCompleted: {'Yes' if task.completed else 'No'}",
             justify="left",
-            bg="#f9f9f9",
+            bg="#E3E4FA",
             anchor="w",
         ).pack(anchor="w", pady=5)
 
-        Label(frame, text="-" * 50, bg="#f9f9f9").pack(anchor="w")
+        # Delete button
+        delete_button = Button(frame, text="Delete", command=lambda task_id=task.id: delete_task(task_id), bg="#FF0000", fg="#000000")
+        delete_button.pack(side="right", padx=10)
 
+        Label(frame, text="-" * 50, bg="#E3E4FA").pack(anchor="w")
 
 # UI: Complete tasks
 def view_tasks_with_checkboxes(manager):
     def save_changes():
         for index, var in enumerate(checkbox_vars):
-            manager.tasks[index].completed = var.get()  # Update task completion status
+            manager.tasks[index].completed = var.get()
         manager.save_all_tasks()
         messagebox.showinfo("Success", "Tasks updated successfully!")
         view_window.destroy()
@@ -120,48 +122,46 @@ def view_tasks_with_checkboxes(manager):
     view_window = Toplevel()
     view_window.title("Tasks with Checkboxes")
     view_window.geometry("500x400")
-    view_window.configure(bg="#f9f9f9")
+    view_window.configure(bg="#E3E4FA")
 
-    Label(view_window, text="Tasks List with Completion", font=("Helvetica", 16), bg="#f9f9f9").pack(pady=10)
+    Label(view_window, text="Tasks List with Completion", font=("Helvetica", 16), bg="#E3E4FA").pack(pady=10)
 
-    checkbox_vars = []  # To store the variables linked to each checkbox
+    checkbox_vars = []
 
     for task in manager.tasks:
-        frame = Frame(view_window, bg="#f9f9f9")
+        frame = Frame(view_window, bg="#E3E4FA")
         frame.pack(anchor="w", padx=10, pady=5)
 
-        var = BooleanVar(value=task.completed)  # Create a checkbox with the current status
+        var = BooleanVar(value=task.completed)
         checkbox_vars.append(var)
 
         Checkbutton(
-            frame, text=f"{task.id}: {task.title} (Deadline: {task.deadline})", variable=var, bg="#f9f9f9"
+            frame, text=f"{task.id}: {task.title} (Deadline: {task.deadline})", variable=var, bg="#E3E4FA"
         ).pack(side="left", anchor="w")
 
-    Button(view_window, text="Save Changes", command=save_changes, bg="#4caf50", fg="white").pack(pady=15)
+    Button(view_window, text="Save Changes", command=save_changes, bg="#7F4E52", fg="#E3E4FA").pack(pady=15)
 
-
-# UI: Delete Task
-def delete_task_ui(manager):
-    def delete_task():
-        try:
-            task_id = int(task_id_entry.get())
-            manager.remove_task(task_id)
-            messagebox.showinfo("Success", "Task deleted successfully!")
-            delete_window.destroy()
-        except ValueError:
-            messagebox.showerror("Error", "Invalid Task ID!")
-
-    delete_window = Toplevel()
-    delete_window.title("Delete Task")
-    delete_window.geometry("300x150")
-    delete_window.configure(bg="#f9f9f9")
-
-    Label(delete_window, text="Task ID to Delete:", bg="#f9f9f9").pack(pady=10)
-    task_id_entry = Entry(delete_window, width=30)
-    task_id_entry.pack()
-
-    Button(delete_window, text="Delete Task", command=delete_task, bg="#f44336", fg="white").pack(pady=15)
-
+# # UI: Delete Task
+# def delete_task_ui(manager):
+#     def delete_task():
+#         try:
+#             task_id = int(task_id_entry.get())
+#             manager.remove_task(task_id)
+#             messagebox.showinfo("Success", "Task deleted successfully!")
+#             delete_window.destroy()
+#         except ValueError:
+#             messagebox.showerror("Error", "Invalid Task ID!")
+#
+#     delete_window = Toplevel()
+#     delete_window.title("Delete Task")
+#     delete_window.geometry("300x150")
+#     delete_window.configure(bg="#f9f9f9")
+#
+#     Label(delete_window, text="Task ID to Delete:", bg="#f9f9f9").pack(pady=10)
+#     task_id_entry = Entry(delete_window, width=30)
+#     task_id_entry.pack()
+#
+#     Button(delete_window, text="Delete Task", command=delete_task, bg="#f44336", fg="white").pack(pady=15)
 
 # UI: Add Task
 def add_task_ui(manager):
@@ -198,27 +198,26 @@ def add_task_ui(manager):
     deadline_entry = Entry(add_window, width=30)
     deadline_entry.pack()
 
-    Button(add_window, text="Save Task", command=save_task, bg="#4caf50", fg="white").pack(pady=15)
-
+    Button(add_window, text="Save Task", command=save_task, bg="#E799A3", fg="#000000").pack(pady=15)
 
 # Main Application
 def run_app():
     manager = TaskManager()
     root = Tk()
     root.title("Task Manager")
-    root.geometry("400x500")
-    root.configure(bg="#ffffff")
+    root.geometry("600x600")
+    root.configure(bg="#E3E4FA")
 
-    Label(root, text="Task Manager", font=("Helvetica", 18, "bold"), bg="#ffffff").pack(pady=15)
+    Label(root, text="Task Manager", font=("Helvetica", 18, "bold"), bg="#E3E4FA").pack(pady=15)
 
-    Button(root, text="Add Task", command=lambda: add_task_ui(manager), width=25, bg="#4caf50", fg="white").pack(pady=10)
-    Button(root, text="View Tasks", command=lambda: view_tasks_ui(manager), width=25, bg="#2196f3", fg="white").pack(pady=10)
-    Button(root, text="Complete Tasks", command=lambda: view_tasks_with_checkboxes(manager),
-           width=25, bg="#ff9800", fg="white").pack(pady=10)
-    Button(root, text="Delete Task", command=lambda: delete_task_ui(manager), width=25, bg="#f44336", fg="white").pack(pady=10)
+    button_frame = Frame(root, bg="#E3E4FA")
+    button_frame.pack(pady=150)
+
+    Button(button_frame, text="Add Task", command=lambda: add_task_ui(manager), width=20, bg="#E799A3", fg="#000000", font=("Helvetica", 14, "bold")).pack(pady=10)
+    Button(button_frame, text="View Tasks", command=lambda: view_tasks_ui(manager), width=20, bg="#806D7E", fg="#000000", font=("Helvetica", 14, "bold")).pack(pady=10)
+    Button(button_frame, text="Complete Tasks", command=lambda: view_tasks_with_checkboxes(manager), width=20, bg="#7F4E52", fg="#000000", font=("Helvetica", 14, "bold")).pack(pady=10)
 
     root.mainloop()
-
 
 if __name__ == "__main__":
     run_app()
