@@ -1,5 +1,5 @@
 import os
-from tkinter import Tk, Button, Label, Frame, Toplevel, Entry, BooleanVar, Checkbutton, messagebox
+from tkinter import Tk, Button, Label, Frame, Toplevel, Entry, BooleanVar, Checkbutton, messagebox, Canvas, Scrollbar
 
 
 # TaskRecord class to represent a single task
@@ -65,9 +65,8 @@ class TaskManager:
             os.remove(file_name)
 
 
-# UI: View Tasks
+# UI: View Tasks with Scrollbar
 def view_tasks_ui(manager):
-    # Create a new window
     view_window = Toplevel()
     view_window.title("View Tasks")
     view_window.geometry("500x400")
@@ -75,18 +74,41 @@ def view_tasks_ui(manager):
 
     Label(view_window, text="Tasks List", font=("Helvetica", 16), bg="#f9f9f9").pack(pady=10)
 
+    # Create a Frame and Canvas for Scrollable View
+    container = Frame(view_window)
+    container.pack(fill="both", expand=True)
+
+    canvas = Canvas(container, bg="#f9f9f9", highlightthickness=0)
+    scrollbar = Scrollbar(container, orient="vertical", command=canvas.yview)
+    scrollable_frame = Frame(canvas, bg="#f9f9f9")
+
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
     for task in manager.tasks:
-        frame = Frame(view_window, bg="#f9f9f9")
-        frame.pack(anchor="w", padx=10, pady=5)
+        frame = Frame(scrollable_frame, bg="#f9f9f9", pady=5)
+        frame.pack(fill="x", padx=10)
 
         Label(
             frame,
-            text=f"{task.id}: {task.title} (Deadline: {task.deadline}, Completed: {'Yes' if task.completed else 'No'})",
+            text=f"ID: {task.id}\nTitle: {task.title}\nDescription: {task.description}\nDeadline: {task.deadline}\nCompleted: {'Yes' if task.completed else 'No'}",
+            justify="left",
             bg="#f9f9f9",
-        ).pack(anchor="w")
+            anchor="w",
+        ).pack(anchor="w", pady=5)
+
+        Label(frame, text="-" * 50, bg="#f9f9f9").pack(anchor="w")
 
 
-# UI: View Tasks with Checkboxes
+# UI: Complete tasks
 def view_tasks_with_checkboxes(manager):
     def save_changes():
         for index, var in enumerate(checkbox_vars):
@@ -95,7 +117,6 @@ def view_tasks_with_checkboxes(manager):
         messagebox.showinfo("Success", "Tasks updated successfully!")
         view_window.destroy()
 
-    # Create a new window
     view_window = Toplevel()
     view_window.title("Tasks with Checkboxes")
     view_window.geometry("500x400")
@@ -130,7 +151,6 @@ def delete_task_ui(manager):
         except ValueError:
             messagebox.showerror("Error", "Invalid Task ID!")
 
-    # Create a new window
     delete_window = Toplevel()
     delete_window.title("Delete Task")
     delete_window.geometry("300x150")
@@ -159,7 +179,6 @@ def add_task_ui(manager):
         else:
             messagebox.showerror("Error", "All fields are required!")
 
-    # Create a new window
     add_window = Toplevel()
     add_window.title("Add Task")
     add_window.geometry("350x300")
@@ -201,6 +220,5 @@ def run_app():
     root.mainloop()
 
 
-# Start the application
 if __name__ == "__main__":
     run_app()
