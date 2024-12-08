@@ -29,7 +29,7 @@ def save_task_to_file(task_id, title, description, deadline, completed):
         file.write(f"{str(completed)}\n")
 
 
-# Function to load tasks from files
+# Function to load all tasks from the folder
 def load_tasks():
     folder_path = ensure_tasks_folder()
     tasks = []
@@ -48,23 +48,17 @@ def load_tasks():
 
 # Function to remove a task
 def remove_task(task_id):
-    tasks = load_tasks()
-    task_to_remove = None
-    for task in tasks:
-        if task[0] == task_id:
-            task_to_remove = task
-            break
+    folder_path = ensure_tasks_folder()
+    file_name = f"{folder_path}{task_id}.txt"
 
-    if task_to_remove:
-        folder_path = ensure_tasks_folder()
-        file_name = f"{folder_path}{task_id}.txt"
-        os.remove(file_name)
+    if os.path.exists(file_name):
+        os.remove(file_name) 
         print(f"Task with ID {task_id} has been removed.")
     else:
-        print("Task not found!")
+        print(f"File for task ID {task_id} not found.")
 
 
-# Function to view tasks
+# Function to display all tasks
 def view_tasks():
     tasks = load_tasks()
     if not tasks:
@@ -76,33 +70,38 @@ def view_tasks():
 
 
 # Function to add a new task
-def add_task():
+def add_task(tasks):
     title = input("Enter task title: ")
     description = input("Enter task description: ")
     deadline = input("Enter task deadline: ")
     if title and description and deadline:
-        tasks = load_tasks()
         task_id = max([task[0] for task in tasks], default=0) + 1
+        tasks.append((task_id, title, description, deadline, False)) 
         save_task_to_file(task_id, title, description, deadline, False)
         print("Task added successfully!")
     else:
         print("All fields are required!")
+    return tasks
 
 
-# Function to update task completion status
-def update_task_completion():
-    tasks = load_tasks()
+# Function to update the completion status of a task
+def update_task_completion(tasks):
     for task in tasks:
         print(f"Task ID: {task[0]} - Title: {task[1]} - Completed: {'Yes' if task[4] else 'No'}")
 
     task_id = int(input("Enter task ID to mark as completed: "))
-    tasks = [task if task[0] != task_id else (task[0], task[1], task[2], task[3], True) for task in tasks]
-    save_task_to_file(task_id, task[1], task[2], task[3], True)  # Update task as completed
+    tasks = [
+        (task[0], task[1], task[2], task[3], True) if task[0] == task_id else task
+        for task in tasks
+    ]
+    save_task_to_file(task_id, task[1], task[2], task[3], True)
     print("Task marked as completed.")
+    return tasks
 
 
-# Function to run the app
+# Function to run the task manager application
 def run_app():
+    tasks = load_tasks() 
     while True:
         print("\nTask Manager")
         print("1. Add Task")
@@ -113,14 +112,15 @@ def run_app():
         choice = input("Enter your choice: ")
 
         if choice == "1":
-            add_task()
+            tasks = add_task(tasks) 
         elif choice == "2":
             view_tasks()
         elif choice == "3":
-            update_task_completion()
+            tasks = update_task_completion(tasks) 
         elif choice == "4":
             task_id_to_remove = int(input("Enter the task ID to delete: "))
-            remove_task(task_id_to_remove)
+            remove_task(task_id_to_remove) 
+            tasks = load_tasks() 
         elif choice == "5":
             break
         else:
