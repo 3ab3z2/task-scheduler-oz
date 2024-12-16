@@ -1,7 +1,9 @@
 import json
 from datetime import datetime, timedelta
 import curses
+import re
 
+# Function to create a task dictionary
 def create_task(task_id, description, due_date, priority, status="Pending"):
     return {
         "task_id": task_id,
@@ -11,11 +13,104 @@ def create_task(task_id, description, due_date, priority, status="Pending"):
         "status": status
     }
 
+# Recursive function to append an item to a list (Tail recursion)
+def append(lst, item):
+    if not lst:
+        return [item]
+    return [lst[0]] + append(lst[1:], item)
+
+# Recursive function to apply a function to each item in a list (Tail recursion)
+def map(func, lst):
+    if not lst:
+        return []
+    return [func(lst[0])] + map(func, lst[1:])
+
+# Recursive function to filter items in a list based on a function (Tail recursion)
+def filter(func, lst):
+    if not lst:
+        return []
+    if func(lst[0]):
+        return [lst[0]] + filter(func, lst[1:])
+    return filter(func, lst[1:])
+
+# Recursive function to apply a function to each item in a list without returning a new list (Tail recursion)
+def for_each(func, lst):
+    if not lst:
+        return
+    func(lst[0])
+    for_each(func, lst[1:])
+
+# Function to clear the curses screen
+def clear(stdscr):
+    stdscr.clear()
+
+# Function to add a string to the curses screen
+def addstr(stdscr, y, x, string, attr=0):
+    stdscr.addstr(y, x, string, attr)
+
+# Function to refresh the curses screen
+def refresh(stdscr):
+    stdscr.refresh()
+
+# Function to validate integer input using regular expressions
+def validate_int(input_str):
+    if re.fullmatch(r'\d+', input_str):
+        return True
+    else:
+        raise ValueError("Invalid input. Please enter a number.")
+
+# Function to validate date input using regular expressions
+def validate_date(date_str):
+    if re.fullmatch(r'\d{4}-\d{2}-\d{2}', date_str):
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+            return True
+        except ValueError:
+            raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
+    else:
+        raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
+
+# Function to get input from the user with optional validation
+def get_input(stdscr, prompt, validation_func=None):
+    while True:
+        clear(stdscr)
+        addstr(stdscr, 0, 0, prompt)
+        refresh(stdscr)
+        curses.echo()
+        input_str = stdscr.getstr(1, 0).decode("utf-8")
+        curses.noecho()
+        if validation_func:
+            try:
+                if validation_func(input_str):
+                    return input_str
+            except ValueError as e:
+                addstr(stdscr, 3, 0, str(e), curses.color_pair(4))
+                addstr(stdscr, 4, 0, "Please try again.", curses.color_pair(4))
+                refresh(stdscr)
+                stdscr.getch()
+        else:
+            return input_str
+
+# Function to print the menu using curses
+def print_menu(stdscr):
+    clear(stdscr)
+    addstr(stdscr, 1, 2, "Task Scheduler", curses.A_BOLD)
+    addstr(stdscr, 3, 2, "1. Add Task")
+    addstr(stdscr, 4, 2, "2. Update Task")
+    addstr(stdscr, 5, 2, "3. Delete Task")
+    addstr(stdscr, 6, 2, "4. View Tasks")
+    addstr(stdscr, 7, 2, "5. Save Tasks")
+    addstr(stdscr, 8, 2, "6. Load Tasks")
+    addstr(stdscr, 9, 2, "7. Exit")
+    refresh(stdscr)
+
+# Function to add a task to the list of tasks
 def add_task(tasks, description, due_date, priority):
     task_id = len(tasks) + 1
     task = create_task(task_id, description, due_date, priority)
-    return tasks + [task]
+    return append(tasks, task)
 
+# Function to update a task in the list of tasks
 def update_task(tasks, task_id, description=None, due_date=None, priority=None, status=None):
     def update(t):
         if t["task_id"] == task_id:
@@ -27,11 +122,15 @@ def update_task(tasks, task_id, description=None, due_date=None, priority=None, 
                 "status": status or t["status"]
             }
         return t
-    return list(map(update, tasks))
+    return map(update, tasks)
 
+# Function to delete a task from the list of tasks
 def delete_task(tasks, task_id):
-    return [task for task in tasks if task["task_id"] != task_id]
+    def filter_task(task):
+        return task["task_id"] != task_id
+    return filter(filter_task, tasks)
 
+# Function to filter tasks based on given criteria
 def filter_tasks(tasks, **criteria):
     def matches(task):
         for key, value in criteria.items():
@@ -40,87 +139,55 @@ def filter_tasks(tasks, **criteria):
             if task[key] != value:
                 return False
         return True
-    return list(filter(matches, tasks))
+    return filter(matches, tasks)
 
+# Function to sort tasks based on a given key
 def sort_tasks(tasks, key):
-    return sorted(tasks, key=lambda task: task[key])
+    def quicksort(lst):
+        if not lst:
+            return []
+        pivot = lst[0]
+        less = [x for x in lst[1:] if x[key] <= pivot[key]]
+        greater = [x for x in lst[1:] if x[key] > pivot[key]]
+        return quicksort(less) + [pivot] + quicksort(greater)
+    return quicksort(tasks)
 
+# Function to notify about overdue or nearing deadline tasks
 def notify(tasks):
     notifications = []
     now = datetime.now()
-    for task in tasks:
+    def check_task(task):
         if task["status"] == "Pending" and task["due_date"] < now:
             notifications.append(f"Task {task['task_id']} is overdue!")
         elif task["status"] == "Pending" and task["due_date"] - now <= timedelta(days=1):
             notifications.append(f"Task {task['task_id']} is nearing its deadline!")
+    for_each(check_task, tasks)
     return notifications
 
+# Function to save tasks to a file
 def save_tasks(tasks, filename):
     with open(filename, "w") as file:
-        json.dump([{
+        json.dump(map(lambda task: {
             "task_id": task["task_id"],
             "description": task["description"],
             "due_date": task["due_date"].strftime("%Y-%m-%d"),
             "priority": task["priority"],
             "status": task["status"]
-        } for task in tasks], file)
+        }, tasks), file)
 
+# Function to load tasks from a file
 def load_tasks(filename):
     with open(filename, "r") as file:
         tasks = json.load(file)
-        return [{
+        return map(lambda task: {
             "task_id": task["task_id"],
             "description": task["description"],
             "due_date": datetime.strptime(task["due_date"], "%Y-%m-%d"),
             "priority": task["priority"],
             "status": task["status"]
-        } for task in tasks]
+        }, tasks)
 
-def print_menu(stdscr):
-    stdscr.clear()
-    stdscr.addstr(1, 2, "Task Scheduler", curses.A_BOLD)
-    stdscr.addstr(3, 2, "1. Add Task")
-    stdscr.addstr(4, 2, "2. Update Task")
-    stdscr.addstr(5, 2, "3. Delete Task")
-    stdscr.addstr(6, 2, "4. View Tasks")
-    stdscr.addstr(7, 2, "5. Save Tasks")
-    stdscr.addstr(8, 2, "6. Load Tasks")
-    stdscr.addstr(9, 2, "7. Exit")
-    stdscr.refresh()
-
-def get_input(stdscr, prompt, validation_func=None):
-    while True:
-        stdscr.clear()
-        stdscr.addstr(0, 0, prompt)
-        stdscr.refresh()
-        curses.echo()
-        input_str = stdscr.getstr(1, 0).decode("utf-8")
-        curses.noecho()
-        if validation_func:
-            try:
-                if validation_func(input_str):
-                    return input_str
-            except ValueError as e:
-                stdscr.addstr(3, 0, str(e), curses.color_pair(4))
-                stdscr.addstr(4, 0, "Please try again.", curses.color_pair(4))
-                stdscr.refresh()
-                stdscr.getch()
-        else:
-            return input_str
-
-def validate_date(date_str):
-    try:
-        datetime.strptime(date_str, "%Y-%m-%d")
-        return True
-    except ValueError:
-        raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
-
-def validate_int(input_str):
-    if input_str.isdigit():
-        return True
-    else:
-        raise ValueError("Invalid input. Please enter a number.")
-
+# Main function to handle the task scheduler logic
 def main(stdscr):
     tasks = []
 
@@ -144,12 +211,12 @@ def main(stdscr):
             task_id = int(get_input(stdscr, "Enter task ID to delete: ", validate_int))
             tasks = delete_task(tasks, task_id)
         elif choice == ord('4'):
-            stdscr.clear()
+            clear(stdscr)
             sorted_tasks = sort_tasks(tasks, "due_date")
             for idx, task in enumerate(sorted_tasks):
                 color = curses.color_pair(3) if task["status"] == "Completed" else curses.color_pair(4) if task["due_date"] < datetime.now() else curses.color_pair(1)
-                stdscr.addstr(idx + 1, 0, f"{task['task_id']}: {task['description']} - {task['due_date'].strftime('%Y-%m-%d')} - {task['priority']} - {task['status']}", color)
-            stdscr.refresh()
+                addstr(stdscr, idx + 1, 0, f"{task['task_id']}: {task['description']} - {task['due_date'].strftime('%Y-%m-%d')} - {task['priority']} - {task['status']}", color)
+            refresh(stdscr)
             stdscr.getch()
         elif choice == ord('5'):
             filename = get_input(stdscr, "Enter filename to save tasks: ")
