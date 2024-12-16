@@ -92,13 +92,15 @@ def get_input(stdscr, prompt, validation_func=None):
             return input_str
 
 # Function to print the menu using curses
-def print_menu(stdscr):
+def print_menu(stdscr, overdue_count):
     clear(stdscr)
     addstr(stdscr, 1, 2, "Task Scheduler", curses.A_BOLD)
     addstr(stdscr, 3, 2, "1. Add Task")
     addstr(stdscr, 4, 2, "2. Update Task")
     addstr(stdscr, 5, 2, "3. Delete Task")
     addstr(stdscr, 6, 2, "4. View Tasks")
+    if overdue_count > 0:
+        addstr(stdscr, 6, 16, f"({overdue_count})", curses.color_pair(4))
     addstr(stdscr, 7, 2, "5. Save Tasks")
     addstr(stdscr, 8, 2, "6. Load Tasks")
     addstr(stdscr, 9, 2, "7. Exit")
@@ -189,10 +191,17 @@ def load_tasks(filename):
 
 # Main function to handle the task scheduler logic
 def main(stdscr):
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+
     tasks = []
 
     while True:
-        print_menu(stdscr)
+        overdue_count = len(filter(lambda t: t["status"] == "Pending" and t["due_date"] < datetime.now(), tasks))
+        print_menu(stdscr, overdue_count)
         choice = stdscr.getch()
 
         if choice == ord('1'):
@@ -213,8 +222,16 @@ def main(stdscr):
         elif choice == ord('4'):
             clear(stdscr)
             sorted_tasks = sort_tasks(tasks, "due_date")
+            now = datetime.now()
             for idx, task in enumerate(sorted_tasks):
-                color = curses.color_pair(3) if task["status"] == "Completed" else curses.color_pair(4) if task["due_date"] < datetime.now() else curses.color_pair(1)
+                if task["status"] == "Completed":
+                    color = curses.color_pair(3)
+                elif task["due_date"] < now:
+                    color = curses.color_pair(4)
+                elif task["due_date"] - now <= timedelta(days=1):
+                    color = curses.color_pair(2)
+                else:
+                    color = curses.color_pair(1)
                 addstr(stdscr, idx + 1, 0, f"{task['task_id']}: {task['description']} - {task['due_date'].strftime('%Y-%m-%d')} - {task['priority']} - {task['status']}", color)
             refresh(stdscr)
             stdscr.getch()
