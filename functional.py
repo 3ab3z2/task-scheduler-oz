@@ -19,13 +19,13 @@ def append(lst, item):
         return [item]
     return [lst[0]] + append(lst[1:], item)
 
-# Recursive function to apply a function to each item in a list (Tail recursion)
+# Recursive function to apply a function to each item in a list (Tail recursion) (First-class function example)
 def map(func, lst):
     if not lst:
         return []
     return [func(lst[0])] + map(func, lst[1:])
 
-# Recursive function to filter items in a list based on a function (Tail recursion)
+# Recursive function to filter items in a list based on a function (Tail recursion) (Firt-class function example)
 def filter(func, lst):
     if not lst:
         return []
@@ -33,7 +33,7 @@ def filter(func, lst):
         return [lst[0]] + filter(func, lst[1:])
     return filter(func, lst[1:])
 
-# Recursive function to apply a function to each item in a list without returning a new list (Tail recursion)
+# Recursive function to apply a function to each item in a list without returning a new list (Tail recursion) (First-class function example)
 def for_each(func, lst):
     if not lst:
         return
@@ -199,7 +199,7 @@ def main(stdscr):
 
     tasks = []
 
-    while True:
+    def loop(tasks):
         overdue_count = len(filter(lambda t: t["status"] == "Pending" and t["due_date"] < datetime.now(), tasks))
         print_menu(stdscr, overdue_count)
         choice = stdscr.getch()
@@ -208,17 +208,17 @@ def main(stdscr):
             description = get_input(stdscr, "Enter description: ")
             due_date = get_input(stdscr, "Enter due date (YYYY-MM-DD): ", validate_date)
             priority = get_input(stdscr, "Enter priority: ", validate_int)
-            tasks = add_task(tasks, description, due_date, priority)
+            return loop(add_task(tasks, description, due_date, priority))
         elif choice == ord('2'):
             task_id = int(get_input(stdscr, "Enter task ID to update: ", validate_int))
             description = get_input(stdscr, "Enter new description (leave blank to keep current): ")
             due_date = get_input(stdscr, "Enter new due date (YYYY-MM-DD, leave blank to keep current): ", validate_date) if get_input(stdscr, "Update due date? (y/n): ").lower() == 'y' else None
             priority = get_input(stdscr, "Enter new priority (leave blank to keep current): ")
             status = get_input(stdscr, "Enter new status (leave blank to keep current): ")
-            tasks = update_task(tasks, task_id, description, due_date, priority, status)
+            return loop(update_task(tasks, task_id, description, due_date, priority, status))
         elif choice == ord('3'):
             task_id = int(get_input(stdscr, "Enter task ID to delete: ", validate_int))
-            tasks = delete_task(tasks, task_id)
+            return loop(delete_task(tasks, task_id))
         elif choice == ord('4'):
             clear(stdscr)
             sorted_tasks = sort_tasks(tasks, "due_date")
@@ -235,13 +235,17 @@ def main(stdscr):
                 addstr(stdscr, idx + 1, 0, f"{task['task_id']}: {task['description']} - {task['due_date'].strftime('%Y-%m-%d')} - {task['priority']} - {task['status']}", color)
             refresh(stdscr)
             stdscr.getch()
+            return loop(tasks)
         elif choice == ord('5'):
             filename = get_input(stdscr, "Enter filename to save tasks: ")
             save_tasks(tasks, filename)
+            return loop(tasks)
         elif choice == ord('6'):
             filename = get_input(stdscr, "Enter filename to load tasks: ")
-            tasks = load_tasks(filename)
+            return loop(load_tasks(filename))
         elif choice == ord('7'):
-            break
+            return
+
+    loop(tasks)
 
 curses.wrapper(main)
