@@ -164,10 +164,10 @@ def main(stdscr):
             stdscr.refresh()
             stdscr.getch()
         elif choice == ord('5'):
-            filename = get_input("Enter filename to save tasks: ")
+            filename = "tasks/" + get_input("Enter filename to save tasks: ")
             scheduler.save_tasks(filename)
         elif choice == ord('6'):
-            filename = get_input("Enter filename to load tasks: ")
+            filename = "tasks/" + get_input("Enter filename to load tasks: ")
             scheduler.load_tasks(filename)
         elif choice == ord('7'):
             break

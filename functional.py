@@ -237,11 +237,11 @@ def main(stdscr):
             stdscr.getch()
             return loop(tasks)
         elif choice == ord('5'):
-            filename = get_input(stdscr, "Enter filename to save tasks: ")
+            filename = "tasks/" + get_input(stdscr, "Enter filename to save tasks: ")
             save_tasks(tasks, filename)
             return loop(tasks)
         elif choice == ord('6'):
-            filename = get_input(stdscr, "Enter filename to load tasks: ")
+            filename = "tasks/" + get_input(stdscr, "Enter filename to load tasks: ")
             return loop(load_tasks(filename))
         elif choice == ord('7'):
             return
