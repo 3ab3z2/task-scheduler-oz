@@ -25,7 +25,7 @@ def map(func, lst):
         return []
     return [func(lst[0])] + map(func, lst[1:])
 
-# Recursive function to filter items in a list based on a function (Tail recursion) (Firt-class function example)
+# Recursive function to filter items in a list based on a function (Tail recursion) (First-class function example)
 def filter(func, lst):
     if not lst:
         return []
@@ -94,16 +94,19 @@ def get_input(stdscr, prompt, validation_func=None):
 # Function to print the menu using curses
 def print_menu(stdscr, overdue_count):
     clear(stdscr)
-    addstr(stdscr, 1, 2, "Task Scheduler", curses.A_BOLD)
-    addstr(stdscr, 3, 2, "1. Add Task")
-    addstr(stdscr, 4, 2, "2. Update Task")
-    addstr(stdscr, 5, 2, "3. Delete Task")
-    addstr(stdscr, 6, 2, "4. View Tasks")
+    stdscr.border(0)
+    addstr(stdscr, 1, 2, "╔════════════════════════════╗", curses.A_BOLD)
+    addstr(stdscr, 2, 2, "║        Task Scheduler      ║", curses.A_BOLD)
+    addstr(stdscr, 3, 2, "╚════════════════════════════╝", curses.A_BOLD)
+    addstr(stdscr, 5, 2, "1. Add Task")
+    addstr(stdscr, 6, 2, "2. Update Task")
+    addstr(stdscr, 7, 2, "3. Delete Task")
+    addstr(stdscr, 8, 2, "4. View Tasks")
     if overdue_count > 0:
-        addstr(stdscr, 6, 16, f"({overdue_count})", curses.color_pair(4))
-    addstr(stdscr, 7, 2, "5. Save Tasks")
-    addstr(stdscr, 8, 2, "6. Load Tasks")
-    addstr(stdscr, 9, 2, "7. Exit")
+        addstr(stdscr, 8, 16, f"({overdue_count})", curses.color_pair(4))
+    addstr(stdscr, 9, 2, "5. Save Tasks")
+    addstr(stdscr, 10, 2, "6. Load Tasks")
+    addstr(stdscr, 11, 2, "7. Exit")
     refresh(stdscr)
 
 # Function to add a task to the list of tasks
@@ -160,6 +163,7 @@ def notify(tasks):
     now = datetime.now()
     def check_task(task):
         if task["status"] == "Pending" and task["due_date"] < now:
+            task["status"] = "Overdue"
             notifications.append(f"Task {task['task_id']} is overdue!")
         elif task["status"] == "Pending" and task["due_date"] - now <= timedelta(days=1):
             notifications.append(f"Task {task['task_id']} is nearing its deadline!")
@@ -181,13 +185,15 @@ def save_tasks(tasks, filename):
 def load_tasks(filename):
     with open(filename, "r") as file:
         tasks = json.load(file)
-        return map(lambda task: {
+        tasks = map(lambda task: {
             "task_id": task["task_id"],
             "description": task["description"],
             "due_date": datetime.strptime(task["due_date"], "%Y-%m-%d"),
             "priority": task["priority"],
             "status": task["status"]
         }, tasks)
+        notify(tasks)  # Update task statuses after loading
+        return tasks
 
 # Main function to handle the task scheduler logic
 def main(stdscr):
@@ -200,7 +206,7 @@ def main(stdscr):
     tasks = []
 
     def loop(tasks):
-        overdue_count = len(filter(lambda t: t["status"] == "Pending" and t["due_date"] < datetime.now(), tasks))
+        overdue_count = len(filter(lambda t: t["status"] == "Overdue", tasks))
         print_menu(stdscr, overdue_count)
         choice = stdscr.getch()
 
@@ -226,7 +232,7 @@ def main(stdscr):
             for idx, task in enumerate(sorted_tasks):
                 if task["status"] == "Completed":
                     color = curses.color_pair(3)
-                elif task["due_date"] < now:
+                elif task["status"] == "Overdue":
                     color = curses.color_pair(4)
                 elif task["due_date"] - now <= timedelta(days=1):
                     color = curses.color_pair(2)
