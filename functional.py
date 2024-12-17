@@ -163,7 +163,6 @@ def notify(tasks):
     now = datetime.now()
     def check_task(task):
         if task["status"] == "Pending" and task["due_date"] < now:
-            task["status"] = "Overdue"
             notifications.append(f"Task {task['task_id']} is overdue!")
         elif task["status"] == "Pending" and task["due_date"] - now <= timedelta(days=1):
             notifications.append(f"Task {task['task_id']} is nearing its deadline!")
@@ -185,15 +184,13 @@ def save_tasks(tasks, filename):
 def load_tasks(filename):
     with open(filename, "r") as file:
         tasks = json.load(file)
-        tasks = map(lambda task: {
+        return map(lambda task: {
             "task_id": task["task_id"],
             "description": task["description"],
             "due_date": datetime.strptime(task["due_date"], "%Y-%m-%d"),
             "priority": task["priority"],
             "status": task["status"]
         }, tasks)
-        notify(tasks)  # Update task statuses after loading
-        return tasks
 
 # Main function to handle the task scheduler logic
 def main(stdscr):
@@ -206,7 +203,7 @@ def main(stdscr):
     tasks = []
 
     def loop(tasks):
-        overdue_count = len(filter(lambda t: t["status"] == "Overdue", tasks))
+        overdue_count = len(filter(lambda t: t["status"] == "Pending" and t["due_date"] < datetime.now(), tasks))
         print_menu(stdscr, overdue_count)
         choice = stdscr.getch()
 
@@ -232,7 +229,7 @@ def main(stdscr):
             for idx, task in enumerate(sorted_tasks):
                 if task["status"] == "Completed":
                     color = curses.color_pair(3)
-                elif task["status"] == "Overdue":
+                elif task["due_date"] < now:
                     color = curses.color_pair(4)
                 elif task["due_date"] - now <= timedelta(days=1):
                     color = curses.color_pair(2)
