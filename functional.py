@@ -135,7 +135,7 @@ def delete_task(tasks, task_id):
         return task["task_id"] != task_id
     return filter(filter_task, tasks)
 
-# Function to filter tasks based on given criteria
+# Function to filter tasks based on given criteria using tail recursion
 def filter_tasks(tasks, **criteria):
     def matches(task):
         for key, value in criteria.items():
@@ -144,7 +144,15 @@ def filter_tasks(tasks, **criteria):
             if task[key] != value:
                 return False
         return True
-    return filter(matches, tasks)
+
+    def filter_recursive(lst, acc):
+        if not lst:
+            return acc
+        if matches(lst[0]):
+            return filter_recursive(lst[1:], acc + [lst[0]])
+        return filter_recursive(lst[1:], acc)
+
+    return filter_recursive(tasks, [])
 
 # Function to sort tasks based on a given key
 def sort_tasks(tasks, key):
